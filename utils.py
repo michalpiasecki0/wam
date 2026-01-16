@@ -108,3 +108,41 @@ def rank_images(explanations, J, size="maximal"):
 
     return ranking
 
+def get_gradients_attribution_on_levels(images, model, explainer, transform, device, LEVELS):
+    """
+    For each image in list of images, gets diagonal, sums gradients at each level and returns normalized values.
+    get_explanations_for_image(img, resnet, resnet_explainer, transform, device, LEVELS)
+    """
+    explanations = [get_explanations_for_image(img, model, explainer, transform, device, LEVELS) for img in images]
+    diagonals_list = [get_diagonal(expl, LEVELS) for expl in explanations]
+    gradients_at_levels = []
+
+    for diag in diagonals_list:
+        gradient_sums_per_level = []
+        for k, v in diag.items():
+            gradient_sum = np.sum(np.abs(v))
+            gradient_sums_per_level.append(gradient_sum)
+        # Normalize
+        gradients_sum_per_level = np.array(gradient_sums_per_level)
+        gradients_sum_per_level /= np.sum(gradients_sum_per_level)
+        gradients_at_levels.append(gradients_sum_per_level)
+    
+
+    return gradients_at_levels
+
+def get_multiple_grad_attr(images, models, explainers, transform, device, LEVELS):
+    all_gradients = []
+    for (model, explainer) in zip(models, explainers):
+        gradients = get_gradients_attribution_on_levels(images, model, explainer, transform, device, LEVELS)
+        all_gradients.append(gradients)
+    return all_gradients
+
+def get_mean_across_images(all_grads):
+    """
+    Gets mean gradients across images for each model. Returns mean gradient for each level for each model"""
+    
+    mean_grads = []
+    for grads in all_grads:
+        mean_grad = np.mean(np.array(grads), axis=0)
+        mean_grads.append(mean_grad)
+    return mean_grads
