@@ -235,8 +235,8 @@ class BaseWAM2D():
         # add the approximation coefficients
         for i, coeff in enumerate(coeffs[1:][::-1]):
             
-            end_index=int(img_size/2**i)
-            start_index=int(img_size/2**(i+1))
+            end_index=int(224/2**i)
+            start_index=int(224/2**(i+1))
 
             # retrieve and average the horizontal, diagonal and vertical 
             # components
@@ -256,9 +256,10 @@ class BaseWAM2D():
                 vertical/=vertical.max()
 
             # add the coefficients 
-            visualization[:,start_index:end_index,start_index:end_index]=diagonal
-            visualization[:,start_index:end_index,:start_index]=vertical
-            visualization[:,:start_index,start_index:end_index]=horizontal
+            visualization[:,start_index:end_index,start_index:end_index] = diagonal[:,:(end_index-start_index),:(end_index-start_index)]
+            visualization[:,start_index:end_index,:start_index]= vertical[:,:(end_index-start_index),:(end_index-start_index)]
+            visualization[:,:start_index,start_index:end_index]= horizontal[:,:(end_index-start_index),:(end_index-start_index)]
+
  
         return visualization
 
@@ -281,10 +282,19 @@ def _reproject_wam(coeffs, normalize_coeffs):
     # retrieve the dimensions of the image and 
     # the batch size
     batch_size=coeffs[0].shape[0]
-    img_size= int(2 * coeffs[-1].horizontal.shape[-1]) # the image size
+
+
+
+    #img_size= int(2 * coeffs[-1].horizontal.shape[-1]) # the image size
                                                         # is twice the size of the 
                                                         # last coefficients
-
+    img_size = 224
+    level_1_size = 224 / 2
+    level_2_size = level_1_size / 2
+    level_3_size = level_2_size / 2
+    level_4_size = level_3_size / 2
+    level_5_size = level_4_size / 2
+    #img_size = 224
     visualization=np.zeros((
         batch_size, img_size, img_size
     )) # we average the gradient values across channels
@@ -302,8 +312,8 @@ def _reproject_wam(coeffs, normalize_coeffs):
     # add the approximation coefficients
     for i, coeff in enumerate(coeffs[1:][::-1]):
         
-        end_index=int(img_size/2**i)
-        start_index=int(img_size/2**(i+1))
+        end_index=int(224/2**i)
+        start_index=int(224/2**(i+1))
 
         # retrieve and average the horizontal, diagonal and vertical 
         # components
@@ -321,11 +331,12 @@ def _reproject_wam(coeffs, normalize_coeffs):
             horizontal/=horizontal.max()
             diagonal/=diagonal.max()
             vertical/=vertical.max()
-
+        print(visualization[:,start_index:end_index,start_index:end_index].shape)
+        print(diagonal[:,:(end_index-start_index),:(end_index-start_index)].shape)
         # add the coefficients 
-        visualization[:,start_index:end_index,start_index:end_index]=diagonal
-        visualization[:,start_index:end_index,:start_index]=vertical
-        visualization[:,:start_index,start_index:end_index]=horizontal
+        visualization[:,start_index:end_index,start_index:end_index] = diagonal[:,:(end_index-start_index),:(end_index-start_index)]
+        visualization[:,start_index:end_index,:start_index]= vertical[:,:(end_index-start_index),:(end_index-start_index)]
+        visualization[:,:start_index,start_index:end_index]= horizontal[:,:(end_index-start_index),:(end_index-start_index)]
 
     return visualization
 
@@ -417,7 +428,7 @@ class WaveletAttribution2D(BaseWAM2D):
         # compute the wavelet transform of the input
         # corresponds to z
         coeffs=ptwt.wavedec2(x,self.wavelet, level=self.J, mode=self.mode)
-
+        print(self.mode)
         # convert the coeffs as a numpy array
         arr_coeffs=to_numpy(coeffs, 2, grads=False)
         baseline_z=_reproject_wam(arr_coeffs, normalize_coeffs=True)
@@ -434,8 +445,7 @@ class WaveletAttribution2D(BaseWAM2D):
             # compute the perturbed alpha * z wavelet transform
             path_coeffs= self.alter(alpha,coeffs)
             # evaluate the perturbed wt
-
-            grad_path[:,i,:,:]=self.wam(path_coeffs,y,image=False)
+            grad_path[:,i,:,:]=self.wam(path_coeffs,y,image=False)[:,:224,:224]
 
         # once computed the path, average the integral using the 
         # trapezoidal rule
