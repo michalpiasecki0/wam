@@ -15,6 +15,7 @@ def get_explanations_for_image(
     Y.append(y)
     X = torch.cat((X, x), dim=0)
     explanation = explainer(X, Y)
+    #return explanation
     return explanation.squeeze()
 
 
@@ -120,8 +121,10 @@ def get_gradients_attribution_on_levels(images, model, explainer, transform, dev
     for diag in diagonals_list:
         gradient_sums_per_level = []
         for k, v in diag.items():
+            print(k)
             gradient_sum = np.sum(np.abs(v))
             gradient_sums_per_level.append(gradient_sum)
+        
         # Normalize
         gradients_sum_per_level = np.array(gradient_sums_per_level)
         gradients_sum_per_level /= np.sum(gradients_sum_per_level)
